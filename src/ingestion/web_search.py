@@ -80,8 +80,8 @@ class WebSearchSource(TrendSource):
                 model=model,
                 max_tokens=2000,
                 system=SYSTEM,
-                tools=tools,
-                messages=messages,
+                tools=tools,  # type: ignore[arg-type]  # SDK accepts plain dicts
+                messages=messages,  # type: ignore[arg-type]
             )
             if resp.stop_reason == "pause_turn":
                 messages = [

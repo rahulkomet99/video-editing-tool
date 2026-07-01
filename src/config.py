@@ -34,7 +34,7 @@ class Config:
     reddit_user_agent: str | None = field(default=None)
 
     @classmethod
-    def load(cls, path: str | Path = "config.yaml") -> "Config":
+    def load(cls, path: str | Path = "config.yaml") -> Config:
         cfg_path = Path(path)
         root = cfg_path.resolve().parent
         data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}

@@ -17,6 +17,7 @@ import anthropic
 from ..config import Config
 from ..media.keyframes import extract_keyframes, sample_times
 from ..models import ContentBrief, SourceClip
+from ..usage import Usage, record
 
 SYSTEM = (
     "You identify what raw video footage is about so we can match it to current "
@@ -32,7 +33,9 @@ class ClipAnalyzer:
         self.model = cc.get("model", "claude-opus-4-8")
         self.frames_per_clip = int(cc.get("analysis_frames_per_clip", 2))
         self.max_frames = int(cc.get("analysis_max_frames", 8))
+        self.pricing = cc.get("pricing")
         self.ffmpeg = cfg.media.get("ffmpeg", "ffmpeg")
+        self.last_usage = Usage()
 
     def analyze(self, clips: list[SourceClip]) -> ContentBrief:
         if not clips:
@@ -68,10 +71,16 @@ class ClipAnalyzer:
             resp = self.client.messages.parse(
                 model=self.model,
                 max_tokens=1000,
-                system=SYSTEM,
-                messages=[{"role": "user", "content": content}],
+                system=[{
+                    "type": "text",
+                    "text": SYSTEM,
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{"role": "user", "content": content}],  # type: ignore[typeddict-item]
                 output_format=ContentBrief,
             )
+
+        self.last_usage = record("analyze", self.model, resp.usage, self.pricing)
 
         brief = resp.parsed_output
         if brief is None:

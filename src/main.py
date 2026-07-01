@@ -21,6 +21,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from .config import Config
 from .ingestion import gather_trends
+from .log import configure
 from .pipeline import Pipeline
 
 
@@ -63,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     p_trends.set_defaults(func=_cmd_trends)
 
     args = parser.parse_args(argv)
+    configure()
     return args.func(args)
 
 

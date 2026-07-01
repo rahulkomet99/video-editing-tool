@@ -22,10 +22,13 @@ class RedditSource(TrendSource):
         return bool(self.cfg.reddit_client_id and self.cfg.reddit_client_secret)
 
     def _token(self) -> str:
+        cid, secret = self.cfg.reddit_client_id, self.cfg.reddit_client_secret
+        if not (cid and secret):
+            raise RuntimeError("Reddit credentials missing (client id/secret).")
         ua = self.cfg.reddit_user_agent or "video-editing-tool/0.1"
         resp = httpx.post(
             TOKEN_URL,
-            auth=(self.cfg.reddit_client_id, self.cfg.reddit_client_secret),
+            auth=(cid, secret),
             data={"grant_type": "client_credentials"},
             headers={"User-Agent": ua},
             timeout=15,

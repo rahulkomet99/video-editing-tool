@@ -15,6 +15,13 @@ claude:
   # about, so it can find *related* trends. Total across clips capped below.
   analysis_frames_per_clip: 2
   analysis_max_frames: 8
+  # Token cost estimate (USD per 1M tokens) for the logged usage line. Exact
+  # token counts come from the API; only the $ figure uses these rates.
+  pricing:
+    input: 15.0
+    output: 75.0
+    cache_write: 18.75
+    cache_read: 1.5
 
 # ---- Trend ingestion ----
 ingestion:
@@ -62,10 +69,31 @@ render:
   # (Arial on Windows/macOS, DejaVuSans on Linux). Set an explicit .ttf path to
   # override, e.g. font: C:\Windows\Fonts\segoeui.ttf
   # font:
-  # Caption styling.
-  caption_size: 56
-  caption_box: true                # semi-transparent box behind the text
+  # Caption mode:
+  #   manual : burn the per-cut captions Claude writes (styled, bold, outlined)
+  #   auto   : transcribe speech with faster-whisper and burn word-by-word
+  #            animated captions (karaoke highlight). Needs faster-whisper; adds
+  #            a model load + a second render pass. Best for talking footage.
+  #   off    : no burned captions (text overlays/titles still render)
+  captions_mode: manual
+  whisper_model: base              # tiny | base | small | medium (bigger = slower/better)
+  caption_highlight: "#FFE000"     # colour a word turns as it's spoken (auto mode)
+  # Caption styling for MANUAL captions. The clean "social" look is a heavy bold
+  # font with a thick outline + drop shadow and NO box. A bold system font is
+  # auto-picked above.
+  caption_size: 64
+  caption_box: false               # solid box behind the text (usually off)
   caption_position: bottom         # bottom | center | top
+
+  # ---- Color / look ----
+  # Fallback color grade if an edit doesn't specify one. Named looks: none,
+  # clean, vibrant, cinematic, warm, cool, moody, vintage, bw. Claude usually
+  # sets this per video; the manual editor can override.
+  look: clean
+  # Optional 3D LUT (.cube) applied on top of every cut for a signature/branded
+  # grade. Give a path, or a bare name found in luts_dir. Leave blank for none.
+  lut:
+  luts_dir: assets/luts
 
   # ---- Effects ----
   # Crossfade duration (s) between cuts when the edit uses transition=crossfade.
@@ -80,3 +108,12 @@ render:
   # The UI also lets you upload one per run.
   music:
   music_volume: 0.25               # 0..1, relative to original audio
+
+  # ---- Logo / watermark (optional) ----
+  # PNG (ideally with transparency) composited over the whole video for branding.
+  # The UI also lets you upload one per run.
+  logo:
+  logo_x: 0.85                     # center X, 0=left..1=right
+  logo_y: 0.07                     # center Y, 0=top..1=bottom
+  logo_scale: 0.16                 # width as fraction of frame
+  logo_opacity: 0.9
