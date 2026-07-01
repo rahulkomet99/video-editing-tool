@@ -1,26 +1,42 @@
 # Automated Video Editing Pipeline
 
 Short-form video pipeline that uses the **Claude API** for edit decisioning and
-**FFmpeg** for rendering, driven by **trend-based content ingestion**.
+**FFmpeg** for rendering, driven by **trend-based content ingestion**. It turns
+raw footage into a finished vertical (9:16) short — cut, graded, captioned, and
+ready to post.
 
 ```
-trends  ──▶  Claude (edit decisioning)  ──▶  FFmpeg (render)  ──▶  vertical .mp4
-(ingest)     produces an Edit Decision List     cuts/scales/captions
+footage ─▶ Claude sees the frames ─▶ Edit Decision List ─▶ FFmpeg render ─▶ 9:16 .mp4
+trends  ─┘  (+ related live trends)     cuts · looks · captions · overlays · music
 ```
 
-## How it works
+## What it does
 
-1. **Ingest trends** from pluggable sources (see below).
-2. **Probe source clips** in `assets/` with `ffprobe` (duration, resolution, audio).
-3. **Decide the edit (with vision)** — FFmpeg samples keyframes from each clip
-   and passes them to Claude as images, so it edits from what's *actually on
-   screen* rather than blind timestamps. Claude returns a validated
-   `EditDecisionList` (clips to cut, in/out points, captions, ordering, hook,
-   hashtags) via structured outputs.
-4. **Render (with effects)** — FFmpeg trims each cut, applies the motion Claude
-   chose (Ken Burns **zoom**, **speed** changes), letterboxes to 9:16, burns
-   **styled captions**, joins cuts with **crossfades** or hard cuts, mixes an
-   optional **music bed**, and adds a gentle fade in/out.
+1. **Understand the footage (content-aware).** Claude looks at sample frames and
+   figures out what the clips are about, then finds live trends *related to your
+   content* instead of forcing it onto a random one. (UI Auto-Pilot.)
+2. **Ingest trends** from pluggable free sources (see below).
+3. **Probe clips** in `assets/` with `ffprobe` (duration, resolution, audio).
+4. **Decide the edit — with vision.** FFmpeg samples keyframes per clip and sends
+   them to Claude as images, so it cuts from what's *actually on screen*. Claude
+   returns a validated `EditDecisionList` via structured outputs.
+5. **Render — with real effects.** FFmpeg trims each cut and applies:
+   - **Motion:** Ken Burns **zoom**, **speed** ramps, **crossfade** or hard cuts.
+   - **Color looks:** a named grade per video (and per shot) — `clean`, `vibrant`,
+     `cinematic`, `warm`, `cool`, `moody`, `vintage`, `bw` — plus optional fine
+     contrast/saturation/brightness and `.cube` **LUTs**.
+   - **Text:** bold, outlined per-cut **captions** and timeline **text overlays**
+     (hero title + callouts). Or **auto word-by-word captions** (see below).
+   - **Branding & audio:** a **logo/watermark** overlay and a **music** bed.
+
+## Word-by-word auto captions
+
+Set `captions_mode: auto` (config or the UI sidebar) and the pipeline transcribes
+the speech with **faster-whisper** and burns karaoke-highlighted word-by-word
+captions (via libass) — the modern TikTok/Reels look. Best for talking footage;
+if there's no speech it falls back to Claude's written captions. `whisper_model`
+and `caption_highlight` are configurable. `manual` (default) burns Claude's
+per-cut captions; `off` burns none.
 
 ## Trend sources (all free)
 
@@ -38,7 +54,9 @@ automatically, and `local` always backfills.
 
 ## Setup
 
-**1. Install FFmpeg** (must be on PATH, or set `media.ffmpeg` / `media.ffprobe` in config)
+**1. Install FFmpeg** (must be on PATH, or set `media.ffmpeg` / `media.ffprobe` in
+config). Needs `libass` (for captions) and `libfreetype` — the standard builds
+below include them.
 
 ```
 Windows:  winget install Gyan.FFmpeg
@@ -61,6 +79,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+`faster-whisper` is included for auto captions; the first `auto` render downloads
+a small speech model. The rest of the pipeline runs fine even if it's missing.
+
 **3. Credentials** — create a `.env` file in the project root (it's gitignored)
 with your Anthropic key:
 
@@ -73,10 +94,7 @@ REDDIT_CLIENT_SECRET=
 
 Or, instead of a key, run `ant auth login` — the SDK picks up that profile.
 
-**4. Add source clips** — drop video files into `assets/`.
-
-Auth note: if `ANTHROPIC_API_KEY` is unset but you've run `ant auth login`, the
-Anthropic SDK picks up that profile automatically — no key needed in `.env`.
+**4. Add source clips** — drop video files into `assets/` (or upload them in the UI).
 
 ## Usage
 
@@ -86,10 +104,14 @@ Anthropic SDK picks up that profile automatically — no key needed in `.env`.
 streamlit run ui/app.py
 ```
 
-Walks through the pipeline one stage at a time — scan clips → pick a trend (or
-type a custom topic) → generate the edit with Claude → render and preview the
-video inline, with a download button. The sidebar shows live status for your
-Anthropic key and FFmpeg.
+- **🚀 Auto-Pilot** — one click runs the whole pipeline (analyze footage → find
+  related trend → edit → render) with live status and a token/cost readout.
+- **🎛️ Manual** — step through it, then fine-tune the edit in an editable
+  **timeline** (cut in/out, caption, zoom, speed, per-shot look, fine grade) and
+  re-render. Upload music/logo per run; choose the caption mode in the sidebar.
+
+Both show a storyboard of the edit and play the result inline with a download
+button. The sidebar shows live status for your Anthropic key and FFmpeg.
 
 ### CLI
 
@@ -105,30 +127,54 @@ Rendered videos land in `output/`.
 
 ## Configuration
 
-Everything is in [`config.yaml`](config.yaml): the Claude model + effort, how
-many keyframes to show Claude per clip, which ingestion sources to use, the
-source/output folders, and the render settings.
+Everything is in [`config.yaml`](config.yaml). Highlights:
 
-**Render / effects** (`render:` in config): vertical 1080×1920 @ 30fps H.264 by
-default. Caption styling (`caption_size`, `caption_box`, `caption_position`),
-`transition_duration` (crossfades), `final_fade`, `zoom_rate` (Ken Burns), and a
-background `music` file + `music_volume`. Per-cut **zoom** and **speed** and the
-**transition** style are chosen by Claude in the edit decision list, not config.
-Music can also be uploaded per-run in the UI.
+- **`claude:`** model + effort, keyframes shown per clip, and `pricing` (per-1M
+  token rates used only for the logged cost estimate — token counts are exact).
+- **`ingestion:`** which sources to use and their options.
+- **`render:`** vertical 1080×1920 @ 30fps H.264 by default, plus:
+  - Captions — `captions_mode` (manual/auto/off), `whisper_model`,
+    `caption_highlight`, and manual-caption styling (`caption_size`,
+    `caption_box`, `caption_position`).
+  - Color — `look` (default grade), `lut` + `luts_dir` (optional `.cube`).
+  - Effects — `transition_duration`, `final_fade`, `zoom_rate`.
+  - Branding/audio — `logo` (+ position/scale/opacity), `music` + `music_volume`.
+
+Per-cut **zoom/speed/look** and the video-level **look/transition** are chosen by
+Claude in the EDL, not config. Music and logo can also be uploaded per run in the UI.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+pytest            # unit tests for the pure logic
+ruff check .      # lint
+mypy src          # type-check
+```
 
 ## Project layout
 
 ```
-ui/app.py               Streamlit web UI
+ui/app.py                 Streamlit UI (Auto-Pilot + Manual tabs)
 src/
-  main.py               CLI entrypoint (run / trends)
-  pipeline.py           orchestrator
-  config.py             config.yaml + .env loading
-  models.py             Trend, SourceClip, EditDecisionList (the EDL contract)
-  ingestion/            TrendSource interface + google_trends / reddit / local
-  decisioning/          ClaudeEditor: trend + clips -> validated EDL
-  rendering/            Renderer interface + FFmpeg backend
-  media/probe.py        ffprobe wrapper
+  main.py                 CLI entrypoint (run / trends)
+  pipeline.py             orchestrator
+  config.py               config.yaml + .env loading
+  log.py                  central logging setup
+  usage.py                Claude token usage + cost logging
+  models.py               Trend, SourceClip, EditDecisionList (the EDL contract), looks
+  ingestion/              TrendSource interface + web_search / reddit / google_trends / local
+  decisioning/
+    claude_editor.py      trend + clips -> validated EDL (vision + prompt caching)
+    content_analyzer.py   footage -> ContentBrief (for content-aware trends)
+  rendering/
+    ffmpeg_renderer.py    FFmpeg backend (cuts, looks, captions, overlays, music)
+    captions_ass.py       word-by-word ASS caption builder
+  media/
+    probe.py              ffprobe wrapper
+    keyframes.py          frame sampling / extraction
+    transcribe.py         faster-whisper word timings (optional)
+tests/                    pytest unit tests
 ```
 
 ## Extending
@@ -138,3 +184,6 @@ src/
 - **Cloud rendering (Shotstack):** implement the `Renderer` interface in
   `src/rendering/` and register it in `get_renderer()`; the `EditDecisionList`
   maps cleanly onto Shotstack's JSON edit spec.
+- **New color look:** add an entry to `LOOKS` in `src/rendering/ffmpeg_renderer.py`
+  and the `Look` type in `src/models.py`.
+```
