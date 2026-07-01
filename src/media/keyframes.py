@@ -17,6 +17,19 @@ def sample_times(duration: float, n: int) -> list[float]:
     return [round((i + 0.5) / n * duration, 3) for i in range(n)]
 
 
+def extract_frame(
+    clip_path: str, t: float, dest: Path, ffmpeg: str = "ffmpeg", width: int = 360
+) -> Path | None:
+    """Extract a single frame at time `t` to `dest`. Returns dest or None."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        ffmpeg, "-y", "-ss", str(t), "-i", str(Path(clip_path).resolve()),
+        "-frames:v", "1", "-vf", f"scale={width}:-2", "-q:v", "3", str(dest),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return dest if proc.returncode == 0 and dest.exists() else None
+
+
 def extract_keyframes(
     clip_path: str,
     times: list[float],

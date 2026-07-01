@@ -33,7 +33,7 @@ class RedditSource(TrendSource):
         resp.raise_for_status()
         return resp.json()["access_token"]
 
-    def fetch(self) -> list[Trend]:
+    def fetch(self, context: str | None = None) -> list[Trend]:
         conf = self.cfg.ingestion.get("reddit", {})
         subreddits = conf.get("subreddits", ["popular"])
         limit = int(conf.get("limit", 10))

@@ -11,6 +11,10 @@ claude:
   keyframes_per_clip: 4
   # Server-side web search tool version. Use web_search_20250305 on older models.
   web_search_tool: web_search_20260209
+  # Content-aware trends: frames Claude sees to figure out what the footage is
+  # about, so it can find *related* trends. Total across clips capped below.
+  analysis_frames_per_clip: 2
+  analysis_max_frames: 8
 
 # ---- Trend ingestion ----
 ingestion:

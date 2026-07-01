@@ -23,6 +23,19 @@ class Trend(BaseModel):
     summary: Optional[str] = None
 
 
+class ContentBrief(BaseModel):
+    """What the uploaded footage is actually about — derived by Claude from
+    sample frames, used to find trends *related* to the content."""
+
+    subject: str = Field(..., description="One line: what the footage shows.")
+    niche: str = Field(..., description="Category/niche, e.g. 'DIY robotics'.")
+    keywords: list[str] = Field(default_factory=list)
+    search_query: str = Field(
+        ..., description="A query to find currently-trending short-form topics "
+        "this footage could ride."
+    )
+
+
 class SourceClip(BaseModel):
     """A source media file available to the editor, with probed metadata."""
 

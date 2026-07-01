@@ -26,7 +26,7 @@ class LocalTopicsSource(TrendSource):
     def available(self) -> bool:
         return self._file().exists()
 
-    def fetch(self) -> list[Trend]:
+    def fetch(self, context: str | None = None) -> list[Trend]:
         raw = json.loads(self._file().read_text(encoding="utf-8"))
         trends: list[Trend] = []
         for item in raw:

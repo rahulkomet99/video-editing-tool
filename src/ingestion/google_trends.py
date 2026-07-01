@@ -17,7 +17,7 @@ RSS_URL = "https://trends.google.com/trends/trendingsearches/daily/rss?geo={geo}
 class GoogleTrendsSource(TrendSource):
     name = "google_trends"
 
-    def fetch(self) -> list[Trend]:
+    def fetch(self, context: str | None = None) -> list[Trend]:
         geo = self.cfg.ingestion.get("google_trends", {}).get("geo", "US")
         feed = feedparser.parse(RSS_URL.format(geo=geo))
 

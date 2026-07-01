@@ -48,18 +48,28 @@ class WebSearchSource(TrendSource):
         # gather_trends() catches and skips on auth failure.
         return True
 
-    def fetch(self) -> list[Trend]:
+    def fetch(self, context: str | None = None) -> list[Trend]:
         claude_cfg = self.cfg.claude
         model = claude_cfg.get("model", "claude-opus-4-8")
         tool_type = claude_cfg.get("web_search_tool", DEFAULT_TOOL)
         n = int(self.cfg.ingestion.get("max_trends", 8))
 
         client = anthropic.Anthropic()
-        user = (
-            f"Search the web for what's trending right now and pick the {n} best "
-            "for short-form videos. Respond with ONLY a JSON array of objects, "
-            'each {"title": "...", "summary": "one line on the angle"}.'
-        )
+        if context:
+            user = (
+                f"The user has footage about: {context}\n\n"
+                f"Search the web for what's trending RIGHT NOW that this footage "
+                f"could ride, and pick the {n} best angles. Prefer trends that "
+                "genuinely fit the footage over generic viral topics. Respond "
+                'with ONLY a JSON array of objects, each {"title": "...", '
+                '"summary": "one line on how this footage fits the trend"}.'
+            )
+        else:
+            user = (
+                f"Search the web for what's trending right now and pick the {n} best "
+                "for short-form videos. Respond with ONLY a JSON array of objects, "
+                'each {"title": "...", "summary": "one line on the angle"}.'
+            )
 
         messages: list[dict] = [{"role": "user", "content": user}]
         tools = [{"type": tool_type, "name": "web_search"}]

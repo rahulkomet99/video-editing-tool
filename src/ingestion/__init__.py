@@ -18,8 +18,13 @@ _REGISTRY: dict[str, type[TrendSource]] = {
 }
 
 
-def gather_trends(cfg: Config) -> list[Trend]:
-    """Run every configured source in order and return a merged, capped list."""
+def gather_trends(cfg: Config, context: str | None = None) -> list[Trend]:
+    """Run every configured source in order and return a merged, capped list.
+
+    `context` (e.g. a description of the uploaded footage) is passed to each
+    source so content-aware sources like web_search can surface *related*
+    trends instead of generic viral topics.
+    """
     ing = cfg.ingestion
     names = ing.get("sources", ["local"])
     max_trends = int(ing.get("max_trends", 8))
@@ -36,7 +41,7 @@ def gather_trends(cfg: Config) -> list[Trend]:
             print(f"[ingest] source '{name}' unavailable (missing creds?), skipping")
             continue
         try:
-            for trend in source.fetch():
+            for trend in source.fetch(context):
                 key = trend.title.strip().lower()
                 if key and key not in seen:
                     seen.add(key)

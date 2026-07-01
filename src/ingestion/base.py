@@ -25,6 +25,11 @@ class TrendSource(ABC):
         return True
 
     @abstractmethod
-    def fetch(self) -> list[Trend]:
-        """Return a list of trending topics."""
+    def fetch(self, context: str | None = None) -> list[Trend]:
+        """Return a list of trending topics.
+
+        `context` is an optional hint (e.g. a description of the uploaded
+        footage) so sources that support it can surface *related* trends.
+        Sources that don't use it simply ignore the argument.
+        """
         raise NotImplementedError
