@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Media
+assets/*
+!assets/.gitkeep
+!assets/README.md
+output/*
+!output/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

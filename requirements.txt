@@ -1,0 +1,7 @@
+anthropic>=0.49.0
+pydantic>=2.6
+PyYAML>=6.0
+python-dotenv>=1.0
+httpx>=0.27
+feedparser>=6.0
+streamlit>=1.30

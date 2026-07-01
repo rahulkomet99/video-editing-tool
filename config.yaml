@@ -1,0 +1,78 @@
+# Automated Video Editing Pipeline configuration.
+
+# ---- Edit decisioning (Claude API) ----
+claude:
+  model: claude-opus-4-8
+  effort: high            # low | medium | high | xhigh | max
+  max_tokens: 8000
+  # Frames sampled per clip and shown to Claude so it can SEE the footage and
+  # choose real cut points / accurate captions. 0 disables vision (metadata
+  # only). More frames = better decisions but higher token cost.
+  keyframes_per_clip: 4
+  # Server-side web search tool version. Use web_search_20250305 on older models.
+  web_search_tool: web_search_20260209
+
+# ---- Trend ingestion ----
+ingestion:
+  # Ordered list of sources to pull trends from. Sources that require
+  # credentials are skipped (with a warning) when creds are missing.
+  #   web_search    : Claude's live web search (needs Anthropic key). Best.
+  #   google_trends : daily-trends RSS. NOTE: Google largely retired this feed;
+  #                   often returns nothing now. Kept for completeness.
+  #   reddit        : free OAuth API. Needs REDDIT_CLIENT_ID / _SECRET.
+  #   local         : reads data/topics.json (always available fallback).
+  sources: [web_search, local]
+  google_trends:
+    geo: US             # US, IN, GB, ...
+  reddit:
+    subreddits: [videos, popular]
+    limit: 10
+  max_trends: 8         # cap total trends considered per run
+
+# ---- Source media ----
+media:
+  # Folder of source clips the editor can cut from.
+  assets_dir: assets
+  # ffprobe/ffmpeg executables. Bare names require FFmpeg on PATH (open a fresh
+  # terminal after installing). If it isn't on PATH, set an absolute path here
+  # locally — but don't commit a machine-specific path.
+  ffmpeg: ffmpeg
+  ffprobe: ffprobe
+
+# ---- Rendering (FFmpeg) ----
+render:
+  backend: ffmpeg
+  output_dir: output
+  # Target short-form vertical format.
+  width: 1080
+  height: 1920
+  fps: 30
+  # Encoder settings.
+  video_codec: libx264
+  audio_codec: aac
+  crf: 20
+  preset: medium
+  # Burn captions into the video.
+  captions: true
+  # Font used for burned-in captions. If unset, a system font is auto-detected
+  # (Arial on Windows/macOS, DejaVuSans on Linux). Set an explicit .ttf path to
+  # override, e.g. font: C:\Windows\Fonts\segoeui.ttf
+  # font:
+  # Caption styling.
+  caption_size: 56
+  caption_box: true                # semi-transparent box behind the text
+  caption_position: bottom         # bottom | center | top
+
+  # ---- Effects ----
+  # Crossfade duration (s) between cuts when the edit uses transition=crossfade.
+  transition_duration: 0.5
+  # Gentle fade-in/out on the whole video (seconds; 0 disables).
+  final_fade: 0.3
+  # Ken Burns zoom rate (fraction added per frame) when a cut sets zoom in/out.
+  zoom_rate: 0.004
+
+  # ---- Background music (optional) ----
+  # Path to a music file mixed under the video. Leave blank for none.
+  # The UI also lets you upload one per run.
+  music:
+  music_volume: 0.25               # 0..1, relative to original audio
