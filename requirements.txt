@@ -10,6 +10,8 @@ pillow==12.2.0          # exact caption text measurement (auto-fit)
 # HTTP job API (src/service).
 fastapi==0.139.0
 uvicorn[standard]==0.49.0
-# Auto word-by-word captions (speech-to-text). Pulls ctranslate2/av; CPU-only
-# by default. Optional at runtime — the pipeline degrades gracefully without it.
-faster-whisper==1.2.1
+
+# Auto word-by-word captions (faster-whisper) are an OPTIONAL extra — they pull
+# heavy ML wheels (ctranslate2/onnxruntime). Install them with
+#   pip install -r requirements-optional.txt
+# The pipeline degrades gracefully (falls back to manual captions) without it.

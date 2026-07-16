@@ -21,6 +21,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.10"
+platform = "linux"              # match CI so local checks catch the same issues
 ignore_missing_imports = true   # anthropic/faster-whisper/streamlit stubs vary
 warn_unused_ignores = true
 warn_redundant_casts = true

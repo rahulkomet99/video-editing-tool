@@ -32,8 +32,9 @@ trends  ─┘  (+ related live trends)     cuts · looks · captions · overlay
 ## Word-by-word auto captions
 
 Set `captions_mode: auto` (config or the UI sidebar) and the pipeline transcribes
-the speech with **faster-whisper** and burns karaoke-highlighted word-by-word
-captions (via libass) — the modern TikTok/Reels look. Best for talking footage;
+the speech with **faster-whisper** (`pip install -r requirements-optional.txt`)
+and burns karaoke-highlighted word-by-word captions (via libass) — the modern
+TikTok/Reels look. Best for talking footage;
 if there's no speech it falls back to Claude's written captions. `whisper_model`
 and `caption_highlight` are configurable. `manual` (default) burns Claude's
 per-cut captions; `off` burns none.
@@ -79,8 +80,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-`faster-whisper` is included for auto captions; the first `auto` render downloads
-a small speech model. The rest of the pipeline runs fine even if it's missing.
+Auto word-by-word captions are an **optional extra** (heavy ML wheels). Install
+them only if you want that feature:
+
+```bash
+pip install -r requirements-optional.txt   # faster-whisper for auto captions
+```
+
+The first `auto` render then downloads a small speech model. Everything else
+works without it — `captions_mode: auto` falls back to manual captions.
 
 **3. Credentials** — create a `.env` file in the project root (it's gitignored)
 with your Anthropic key:

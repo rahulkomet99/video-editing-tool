@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install deps first so this layer caches across code changes.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install deps first so this layer caches across code changes. The deployed
+# image includes the optional auto-caption extra (faster-whisper).
+COPY requirements.txt requirements-optional.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-optional.txt
 
 # App code + config + trend fallback data (no user assets baked in).
 COPY src/ ./src/

@@ -1,0 +1,6 @@
+# Optional features. Install on top of requirements.txt:
+#   pip install -r requirements-optional.txt
+
+# Auto word-by-word captions (speech-to-text). Pulls ctranslate2/onnxruntime;
+# CPU-only by default. Without it, captions_mode=auto falls back to manual.
+faster-whisper==1.2.1
