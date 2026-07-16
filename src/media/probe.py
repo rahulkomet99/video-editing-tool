@@ -6,7 +6,10 @@ import json
 import subprocess
 from pathlib import Path
 
+from ..log import get_logger
 from ..models import SourceClip
+
+log = get_logger(__name__)
 
 VIDEO_EXTS = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"}
 
@@ -25,10 +28,10 @@ def probe_clip(path: Path, ffprobe: str = "ffprobe") -> SourceClip | None:
     ]
     try:
         out = subprocess.run(
-            cmd, capture_output=True, text=True, check=True
+            cmd, capture_output=True, text=True, check=True, timeout=30
         ).stdout
-    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-        print(f"[probe] could not probe {path.name}: {exc}")
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        log.warning("could not probe %s: %s", path.name, exc)
         return None
 
     data = json.loads(out)
@@ -51,7 +54,7 @@ def probe_clip(path: Path, ffprobe: str = "ffprobe") -> SourceClip | None:
 def probe_assets(assets_dir: Path, ffprobe: str = "ffprobe") -> list[SourceClip]:
     """Probe every video file in `assets_dir`."""
     if not assets_dir.exists():
-        print(f"[probe] assets dir not found: {assets_dir}")
+        log.warning("assets dir not found: %s", assets_dir)
         return []
     clips: list[SourceClip] = []
     for f in sorted(assets_dir.iterdir()):

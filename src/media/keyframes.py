@@ -26,7 +26,10 @@ def extract_frame(
         ffmpeg, "-y", "-ss", str(t), "-i", str(Path(clip_path).resolve()),
         "-frames:v", "1", "-vf", f"scale={width}:-2", "-q:v", "3", str(dest),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return None
     return dest if proc.returncode == 0 and dest.exists() else None
 
 
@@ -59,7 +62,10 @@ def extract_keyframes(
             "3",
             str(dest),
         ]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            continue
         if proc.returncode == 0 and dest.exists():
             frames.append((t, dest))
     return frames

@@ -1,0 +1,24 @@
+# Secrets — never bake into an image.
+.env
+.env.*
+
+# Virtualenv / VCS / caches.
+.venv/
+.git/
+.github/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime artifacts and user media (mount these at runtime instead).
+output/
+assets/
+!assets/.gitkeep
+
+# Dev-only files.
+tests/
+requirements-dev.txt
+*.md

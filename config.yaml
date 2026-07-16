@@ -40,6 +40,13 @@ ingestion:
     limit: 10
   max_trends: 8         # cap total trends considered per run
 
+# ---- Upload limits (UI) ----
+# Guard against oversized/long uploads that could hang or overload rendering.
+uploads:
+  max_upload_mb: 300      # per-file cap for clips/music/logo
+  max_clips: 25           # max clips in the assets library
+  max_duration_s: 900     # reject clips longer than this (15 min)
+
 # ---- Source media ----
 media:
   # Folder of source clips the editor can cut from.
@@ -94,6 +101,10 @@ render:
   # grade. Give a path, or a bare name found in luts_dir. Leave blank for none.
   lut:
   luts_dir: assets/luts
+
+  # Hard ceiling (seconds) on a single ffmpeg pass. A malformed/oversized input
+  # can't hang a worker forever — the encode is killed and the render errors.
+  render_timeout: 600
 
   # ---- Effects ----
   # Crossfade duration (s) between cuts when the edit uses transition=crossfade.

@@ -64,6 +64,10 @@ class Config:
     def render(self) -> dict[str, Any]:
         return self.raw.get("render", {})
 
+    @property
+    def uploads(self) -> dict[str, Any]:
+        return self.raw.get("uploads", {})
+
     def path(self, value: str) -> Path:
         """Resolve a config path relative to the project root."""
         p = Path(value)

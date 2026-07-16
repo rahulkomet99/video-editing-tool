@@ -29,7 +29,13 @@ from src.decisioning import ClaudeEditor, ClipAnalyzer
 from src.ingestion import gather_trends
 from src.log import configure as configure_logging
 from src.media.keyframes import extract_frame
-from src.media.probe import probe_assets
+from src.media.probe import probe_assets, probe_clip
+from src.media.uploads import (
+    UploadLimits,
+    count_error,
+    duration_error,
+    size_error,
+)
 from src.models import Cut, EditDecisionList, Look, Trend
 from src.pipeline import _slugify
 from src.rendering import get_renderer
@@ -100,15 +106,31 @@ def scan_clips(cfg: Config):
 
 
 def save_uploads(cfg: Config, uploads) -> list[str]:
-    """Persist uploaded clips into the assets folder; return new filenames."""
+    """Persist uploaded clips into the assets folder (within size/count/duration
+    limits); return new filenames. Rejected files are surfaced via st.error."""
+    limits = UploadLimits.from_config(cfg)
     assets_dir = cfg.path(cfg.media.get("assets_dir", "assets"))
     assets_dir.mkdir(parents=True, exist_ok=True)
+    existing = len(st.session_state.clips or [])
+    ffprobe = cfg.media.get("ffprobe", "ffprobe")
     saved: list[str] = []
     for uf in uploads or []:
         sig = (uf.name, uf.size)
         if sig in st.session_state.uploaded_sigs:
             continue
-        (assets_dir / Path(uf.name).name).write_bytes(uf.getbuffer())
+        err = (size_error(uf.name, uf.size, limits.max_upload_mb)
+               or count_error(existing + len(saved), 1, limits.max_clips))
+        if err:
+            st.error(f"Skipped {err}")
+            continue
+        dest = assets_dir / Path(uf.name).name
+        dest.write_bytes(uf.getbuffer())
+        # Duration guard needs the file on disk; reject + remove if too long.
+        derr = duration_error(probe_clip(dest, ffprobe=ffprobe), limits.max_duration_s)
+        if derr:
+            dest.unlink(missing_ok=True)
+            st.error(f"Skipped {derr}")
+            continue
         st.session_state.uploaded_sigs.add(sig)
         saved.append(Path(uf.name).name)
     if saved:
@@ -117,8 +139,14 @@ def save_uploads(cfg: Config, uploads) -> list[str]:
 
 
 def stash_upload(cfg: Config, file, subdir: str) -> str | None:
-    """Persist a per-run upload (music/logo) under output/<subdir>."""
+    """Persist a per-run upload (music/logo) under output/<subdir>, within the
+    size limit. Returns None (with an st.error) if the file is too large."""
     if file is None:
+        return None
+    limits = UploadLimits.from_config(cfg)
+    err = size_error(file.name, file.size, limits.max_upload_mb)
+    if err:
+        st.error(f"Skipped {err}")
         return None
     d = cfg.path(cfg.render.get("output_dir", "output")) / subdir
     d.mkdir(parents=True, exist_ok=True)

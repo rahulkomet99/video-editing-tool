@@ -12,7 +12,6 @@ Clips without audio get synthesized silence so the audio graph stays aligned.
 from __future__ import annotations
 
 import shutil
-import subprocess
 import tempfile
 from functools import lru_cache
 from pathlib import Path
@@ -20,6 +19,7 @@ from pathlib import Path
 from ..config import Config
 from ..log import get_logger
 from ..media.probe import probe_clip
+from ..media.run import run as run_ffmpeg
 from ..models import Cut, EditDecisionList, ImageOverlay
 from .base import Renderer
 
@@ -97,6 +97,8 @@ class FFmpegRenderer(Renderer):
         self.acodec = r.get("audio_codec", "aac")
         self.crf = str(r.get("crf", 20))
         self.preset = r.get("preset", "medium")
+        # Hard ceiling on a single ffmpeg pass so a bad input can't hang a worker.
+        self.render_timeout = float(r.get("render_timeout", 600))
         self.captions = bool(r.get("captions", True))
         # Caption mode: "manual" burns the per-cut EDL captions; "auto" runs
         # speech-to-text (faster-whisper) and burns word-by-word animated
@@ -377,7 +379,7 @@ class FFmpegRenderer(Renderer):
                 "-c:a", "copy", "-movflags", "+faststart",
                 str(output_path.resolve()),
             ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, cwd=td)
+            proc = run_ffmpeg(cmd, timeout=self.render_timeout, cwd=td)
             if proc.returncode != 0:
                 raise RuntimeError("ffmpeg (subtitles) failed:\n" + proc.stderr[-4000:])
         return output_path
@@ -513,7 +515,7 @@ class FFmpegRenderer(Renderer):
         ]
 
         cwd = self.font_dir if self.font_name else None
-        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+        proc = run_ffmpeg(cmd, timeout=self.render_timeout, cwd=cwd)
         if proc.returncode != 0:
             raise RuntimeError("ffmpeg failed:\n" + proc.stderr[-4000:])
         return output_path

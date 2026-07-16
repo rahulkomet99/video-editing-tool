@@ -177,3 +177,35 @@ def test_build_ass_has_events_and_karaoke():
     words = [W("hello", 0.0, 0.4), W("world", 0.5, 0.9)]
     out = ca.build_ass(words, 1080, 1920)
     assert "[Events]" in out and "Dialogue:" in out and r"\kf" in out
+
+
+# --------------------------------------------------------------------------- #
+# upload guards
+# --------------------------------------------------------------------------- #
+def test_size_error_rejects_over_limit():
+    from src.media.uploads import size_error
+    assert size_error("big.mp4", 400 * 1024 * 1024, 300) is not None
+    assert size_error("ok.mp4", 10 * 1024 * 1024, 300) is None
+
+
+def test_count_error_rejects_over_budget():
+    from src.media.uploads import count_error
+    assert count_error(24, 3, 25) is not None
+    assert count_error(10, 5, 25) is None
+
+
+def test_duration_error_cases():
+    from src.media.uploads import duration_error
+    assert duration_error(None, 900) is not None  # unprobeable
+    assert duration_error(_clip(duration=1200), 900) is not None  # too long
+    assert duration_error(_clip(duration=30), 900) is None
+
+
+def test_upload_limits_from_config_defaults():
+    from src.media.uploads import UploadLimits
+
+    class _Cfg:
+        uploads = {"max_upload_mb": 50}
+
+    lim = UploadLimits.from_config(_Cfg())
+    assert lim.max_upload_mb == 50 and lim.max_clips == 25  # default fills in
