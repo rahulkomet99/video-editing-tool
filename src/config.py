@@ -68,6 +68,10 @@ class Config:
     def uploads(self) -> dict[str, Any]:
         return self.raw.get("uploads", {})
 
+    @property
+    def service(self) -> dict[str, Any]:
+        return self.raw.get("service", {})
+
     def path(self, value: str) -> Path:
         """Resolve a config path relative to the project root."""
         p = Path(value)

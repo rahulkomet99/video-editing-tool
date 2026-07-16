@@ -125,6 +125,42 @@ python -m src.main run --limit 1
 
 Rendered videos land in `output/`.
 
+### HTTP API (async job service)
+
+An async render API so renders don't block callers and can be metered per user.
+
+```bash
+uvicorn src.service.api:create_app --factory --port 8000
+```
+
+Interactive docs at `/docs`. Endpoints (send `X-API-Key` when keys are set):
+
+```bash
+# Submit a render job (returns immediately with a job id)
+curl -XPOST localhost:8000/jobs -H 'X-API-Key: KEY' \
+     -H 'content-type: application/json' -d '{"topic": "diy robots"}'
+
+curl localhost:8000/jobs/<id>            -H 'X-API-Key: KEY'   # status
+curl localhost:8000/jobs/<id>/download   -H 'X-API-Key: KEY' -o out.mp4
+curl localhost:8000/usage                -H 'X-API-Key: KEY'   # your token/cost totals
+```
+
+Jobs run on a background worker pool (`service.max_workers`), state persists in
+SQLite (`service.db_path`), outputs go through a pluggable store
+(`service.storage_dir`), and each job records its own token usage/cost. Set
+`service.api_keys` (`["key:caller"]`) or `SERVICE_API_KEYS` to require auth;
+empty = open dev mode.
+
+### Docker
+
+```bash
+docker compose up --build      # UI on :8501, API on :8000
+```
+
+Both services build from the one `Dockerfile` (ffmpeg + fonts included) and read
+`ANTHROPIC_API_KEY` / `SERVICE_API_KEYS` from your local `.env`. `assets/` and
+`output/` are mounted as volumes.
+
 ## Configuration
 
 Everything is in [`config.yaml`](config.yaml). Highlights:
@@ -174,7 +210,15 @@ src/
     probe.py              ffprobe wrapper
     keyframes.py          frame sampling / extraction
     transcribe.py         faster-whisper word timings (optional)
-tests/                    pytest unit tests
+    uploads.py            upload size/count/duration guards
+    run.py                timeout-bounded subprocess runner
+  service/                async HTTP job API (FastAPI)
+    api.py                endpoints (jobs / download / usage / healthz)
+    jobs.py               SQLite job store
+    worker.py             thread-pool runner (Celery-swappable)
+    storage.py            output storage (LocalStorage; S3-swappable)
+    auth.py               API-key auth
+tests/                    pytest unit tests (pipeline + service)
 ```
 
 ## Extending
@@ -186,4 +230,7 @@ tests/                    pytest unit tests
   maps cleanly onto Shotstack's JSON edit spec.
 - **New color look:** add an entry to `LOOKS` in `src/rendering/ffmpeg_renderer.py`
   and the `Look` type in `src/models.py`.
+- **Scale out:** the job API is single-node (thread pool + SQLite + local files).
+  For multiple workers, swap `JobRunner` for a Celery/RQ task calling the same
+  `default_run`, `LocalStorage` for an S3/MinIO `Storage`, and SQLite for Postgres.
 ```

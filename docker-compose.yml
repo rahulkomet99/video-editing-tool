@@ -1,0 +1,27 @@
+# Streamlit UI + HTTP job API from one image. Both share the assets/output
+# volumes and read ANTHROPIC_API_KEY (and optional SERVICE_API_KEYS) from your
+# local .env. Start with: docker compose up --build
+services:
+  ui:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./assets:/app/assets
+      - ./output:/app/output
+
+  api:
+    build: .
+    command: >
+      uvicorn src.service.api:create_app --factory
+      --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - SERVICE_API_KEYS=${SERVICE_API_KEYS:-}
+    volumes:
+      - ./assets:/app/assets
+      - ./output:/app/output

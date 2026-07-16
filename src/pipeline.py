@@ -9,7 +9,7 @@ from .decisioning import ClaudeEditor
 from .ingestion import gather_trends
 from .log import get_logger
 from .media.probe import probe_assets
-from .models import RenderResult
+from .models import RenderResult, Trend
 from .rendering import get_renderer
 
 log = get_logger(__name__)
@@ -58,3 +58,26 @@ class Pipeline:
             log.info("Done: %s", out_path)
 
         return results
+
+    def run_one(self, topic: str | None = None) -> RenderResult:
+        """Render a single video for an explicit `topic`, or the top live trend
+        if none is given. Used by the job API (`self.editor.last_usage` holds the
+        tokens for this render afterwards)."""
+        assets_dir = self.cfg.path(self.cfg.media.get("assets_dir", "assets"))
+        clips = probe_assets(assets_dir, ffprobe=self.cfg.media.get("ffprobe", "ffprobe"))
+        if not clips:
+            raise RuntimeError(f"No source clips found in {assets_dir}.")
+
+        if topic:
+            trend = Trend(title=topic, source="api")
+        else:
+            trends = gather_trends(self.cfg)
+            trend = trends[0] if trends else Trend(title="general", source="fallback")
+
+        log.info("Deciding edit for: %r", trend.title)
+        edl = self.editor.decide(trend, clips)
+        out_dir = self.cfg.path(self.cfg.render.get("output_dir", "output"))
+        out_path = out_dir / f"{_slugify(edl.title)}.mp4"
+        log.info("Rendering -> %s", out_path)
+        self.renderer.render(edl, out_path)
+        return RenderResult(output_path=str(out_path), edl=edl, trend=trend)

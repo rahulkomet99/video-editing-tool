@@ -40,6 +40,14 @@ ingestion:
     limit: 10
   max_trends: 8         # cap total trends considered per run
 
+# ---- HTTP service (job API) ----
+# Run with: uvicorn src.service.api:create_app --factory
+service:
+  api_keys: []            # e.g. ["k_live_abc:alice"]; empty = open dev mode
+  db_path: output/jobs.db
+  storage_dir: output/renders
+  max_workers: 2          # concurrent renders on this node
+
 # ---- Upload limits (UI) ----
 # Guard against oversized/long uploads that could hang or overload rendering.
 uploads:
